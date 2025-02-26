@@ -167,10 +167,7 @@ class TCRfuzzy:
                 logging.info(f"处理完成！共计算 {total_comparisons} 对，保存了 {len(results_df)} 条结果")
                 logging.info(f"结果已保存到: {output_path}")
                 
-                # 清理数据
-                del results_df
-                del all_results
-                gc.collect()
+
                 
             except Exception as e:
                 logging.error(f"保存结果时出错: {e}")
