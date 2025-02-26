@@ -6,6 +6,9 @@ import multiprocessing
 from typing import List, Dict, Any, Tuple
 import logging
 from datetime import datetime
+import gc
+import warnings
+warnings.filterwarnings('ignore')
 
 # 设置日志
 logging.basicConfig(
@@ -48,6 +51,17 @@ import argparse
 from multiprocessing import Pool, cpu_count
 import numpy as np
 
+def get_optimal_process_count() -> int:
+    """计算最优进程数"""
+    cpu_cores = cpu_count()
+    MAX_PROCESSES = 16
+    optimal_processes = min(cpu_cores, MAX_PROCESSES)
+    
+    if cpu_cores > 16:
+        optimal_processes = optimal_processes // 2
+    
+    return max(1, min(optimal_processes, 8))
+
 def preprocess_string(s: str) -> str:
     """预处理字符串"""
     if not isinstance(s, str):
@@ -56,9 +70,9 @@ def preprocess_string(s: str) -> str:
 
 def calculate_similarity(args: Tuple[int, Tuple[str, str]]) -> Dict[str, Any]:
     """计算字符串相似度"""
-    index, (str1, str2) = args
-    
     try:
+        index, (str1, str2) = args
+        
         # 预处理字符串
         str1_processed = preprocess_string(str1)
         str2_processed = preprocess_string(str2)
@@ -73,6 +87,18 @@ def calculate_similarity(args: Tuple[int, Tuple[str, str]]) -> Dict[str, Any]:
                 '部分相似度(partial_ratio)': 100,
                 '排序标记相似度(token_sort_ratio)': 100,
                 '集合标记相似度(token_set_ratio)': 100
+            }
+        
+        # 空字符串处理
+        if not str1_processed or not str2_processed:
+            return {
+                'idx': index,
+                '字符串1': str1,
+                '字符串2': str2,
+                '相似度(ratio)': 0,
+                '部分相似度(partial_ratio)': 0,
+                '排序标记相似度(token_sort_ratio)': 0,
+                '集合标记相似度(token_set_ratio)': 0
             }
         
         # 计算各种相似度
@@ -120,6 +146,10 @@ def process_batch(batch_data: List[Tuple[int, Tuple[str, str]]],
         logging.error(f"批处理时出错: {e}")
         return []
 
+def chunk_pairs(pairs: List[Tuple[str, str]], chunk_size: int) -> List[List[Tuple[str, str]]]:
+    """将配对列表分割成更小的块"""
+    return [pairs[i:i + chunk_size] for i in range(0, len(pairs), chunk_size)]
+
 def main():
     parser = argparse.ArgumentParser(
         description="FuzzyWuzzy CSV并行比较工具 - 计算CSV文件中两列之间的字符串相似度",
@@ -136,8 +166,8 @@ def main():
     parser.add_argument("--encoding", default="utf-8", help="CSV文件的编码")
     parser.add_argument("--skip-rows", type=int, default=0, help="读取CSV时跳过的行数")
     parser.add_argument("-p", "--processes", type=int, default=0,
-                        help="并行处理的进程数（默认为CPU核心数）")
-    parser.add_argument("-b", "--batch-size", type=int, default=10000,
+                        help="并行处理的进程数（默认为自动优化）")
+    parser.add_argument("-b", "--batch-size", type=int, default=1000,
                         help="每批处理的对比对数")
     parser.add_argument("--threshold", type=int, default=0,
                         help="仅保存相似度分数高于此阈值的结果（0-100）")
@@ -159,8 +189,8 @@ def main():
         logging.error("内存限制必须在0到1之间")
         sys.exit(1)
     
-    # 设置进程数
-    processes = args.processes if args.processes > 0 else cpu_count()
+    # 设置最优进程数
+    processes = args.processes if args.processes > 0 else get_optimal_process_count()
     logging.info(f"将使用 {processes} 个进程进行并行处理")
     
     try:
@@ -173,7 +203,7 @@ def main():
             logging.error(f"CSV文件只有{len(df.columns)}列，但指定了列{max(args.column1, args.column2)}")
             sys.exit(1)
         
-        # 获取列数据
+        # 获取列数据并预处理
         col1 = df.iloc[:, args.column1].astype(str).tolist()
         col2 = df.iloc[:, args.column2].astype(str).tolist()
         
@@ -187,8 +217,8 @@ def main():
             
         logging.info(f"将比较 {len(col1)} x {len(col2)} = {total_comparisons} 个组合")
         
-        # 批处理设置
-        batch_size = min(args.batch_size, total_comparisons)
+        # 调整批处理大小
+        batch_size = min(args.batch_size, max(100, total_comparisons // (processes * 4)))
         num_batches = (total_comparisons + batch_size - 1) // batch_size
         
         all_results = []
@@ -200,10 +230,19 @@ def main():
                 end_idx = min(start_idx + batch_size, total_comparisons)
                 
                 batch_pairs = [(i, pairs[i]) for i in range(start_idx, end_idx)]
-                batch_results = process_batch(batch_pairs, pool, args.threshold)
-                all_results.extend(batch_results)
                 
-                logging.info(f"批次 {batch_idx + 1}/{num_batches} 完成")
+                try:
+                    batch_results = process_batch(batch_pairs, pool, args.threshold)
+                    all_results.extend(batch_results)
+                    logging.info(f"批次 {batch_idx + 1}/{num_batches} 完成")
+                except Exception as e:
+                    logging.error(f"处理批次 {batch_idx + 1} 时出错: {e}")
+                    continue
+                
+                # 清理内存
+                del batch_pairs
+                if batch_idx % 10 == 0:
+                    gc.collect()
         
         # 处理结果
         if not all_results:
@@ -231,4 +270,6 @@ def main():
         sys.exit(1)
 
 if __name__ == "__main__":
+    # 设置NumExpr线程数
+    os.environ["NUMEXPR_MAX_THREADS"] = "8"
     main()
