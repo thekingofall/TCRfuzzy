@@ -33,7 +33,7 @@ cd TCRfuzzy
 ### 基本用法
 
 ```bash
-python tcr_fuzzy.py your_tcr_file.csv
+python tcr_fuzzy.py test.csv
 ```
 
 这将比较CSV文件中第一列和第二列的所有TCR序列可能组合，并将结果保存到同目录下的`your_tcr_file_similarity_results.csv`。
