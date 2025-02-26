@@ -178,16 +178,6 @@ class TCRfuzzy:
         except Exception as e:
             logging.error(f"处理过程中出错: {e}")
         
-        finally:
-            # 清理所有变量
-            try:
-                del col1
-                del col2
-            except:
-                pass
-            
-            # 强制进行垃圾回收
-            gc.collect()
 
 def main():
     # 创建参数解析器
