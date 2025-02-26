@@ -22,7 +22,7 @@ TCRfuzzy利用FuzzyWuzzy库和Levenshtein距离算法，专门用于比较TCR（
 只需克隆此仓库：
 
 ```bash
-git clone https://github.com/yourusername/TCRfuzzy.git
+git clone https://github.com/thekingofall/TCRfuzzy.git
 cd TCRfuzzy
 ```
 
