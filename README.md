@@ -105,6 +105,11 @@ python tcr_fuzzy.py tcr_data.csv -d ";" -o tcr_similarity_results.csv
 - tqdm: 进度条显示
 - argparse: 命令行参数处理
 
+## 使用者可以引用
+```
+https://www.nature.com/articles/s43587-023-00379-0#code-availability
+```
+
 
 
 
