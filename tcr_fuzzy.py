@@ -8,7 +8,7 @@ from datetime import datetime
 import gc
 import warnings
 warnings.filterwarnings('ignore')
-
+import argparse  # 添加这行
 class TCRfuzzy:
     def __init__(self):
         """初始化TCRfuzzy类"""
