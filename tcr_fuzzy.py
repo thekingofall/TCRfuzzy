@@ -7,8 +7,9 @@ import logging
 from datetime import datetime
 import gc
 import warnings
+import argparse
 warnings.filterwarnings('ignore')
-import argparse  # 添加这行
+
 class TCRfuzzy:
     def __init__(self):
         """初始化TCRfuzzy类"""
@@ -31,7 +32,6 @@ class TCRfuzzy:
         from fuzzywuzzy import fuzz
         import itertools
         from tqdm import tqdm
-        import argparse
         import numpy as np
         
         self.pd = pd
@@ -167,7 +167,10 @@ class TCRfuzzy:
                 logging.info(f"处理完成！共计算 {total_comparisons} 对，保存了 {len(results_df)} 条结果")
                 logging.info(f"结果已保存到: {output_path}")
                 
-
+                # 清理数据
+                del results_df
+                del all_results
+                gc.collect()
                 
             except Exception as e:
                 logging.error(f"保存结果时出错: {e}")
@@ -175,6 +178,16 @@ class TCRfuzzy:
         except Exception as e:
             logging.error(f"处理过程中出错: {e}")
         
+        finally:
+            # 清理所有变量
+            try:
+                del col1
+                del col2
+            except:
+                pass
+            
+            # 强制进行垃圾回收
+            gc.collect()
 
 def main():
     # 创建参数解析器
@@ -200,35 +213,48 @@ def main():
     # 验证文件存在
     if not os.path.exists(args.csv_file):
         logging.error(f"文件不存在: {args.csv_file}")
-        sys.exit(1)
+        return 1
     
     # 验证阈值范围
     if not 0 <= args.threshold <= 100:
         logging.error("阈值必须在0到100之间")
-        sys.exit(1)
+        return 1
     
-    try:
-        # 创建TCRfuzzy实例并运行比较
-        tcr_fuzzy = TCRfuzzy()
-        tcr_fuzzy.compare_tcrs(
-            csv_file=args.csv_file,
-            column1=args.column1,
-            column2=args.column2,
-            output=args.output,
-            delimiter=args.delimiter,
-            encoding=args.encoding,
-            skip_rows=args.skip_rows,
-            threshold=args.threshold
-        )
-    finally:
-        # 确保程序完全清理
-        gc.collect()
-        # 关闭所有日志处理器
-        for handler in logging.root.handlers:
-            handler.close()
-        logging.shutdown()
+    # 创建TCRfuzzy实例并运行比较
+    tcr_fuzzy = TCRfuzzy()
+    tcr_fuzzy.compare_tcrs(
+        csv_file=args.csv_file,
+        column1=args.column1,
+        column2=args.column2,
+        output=args.output,
+        delimiter=args.delimiter,
+        encoding=args.encoding,
+        skip_rows=args.skip_rows,
+        threshold=args.threshold
+    )
+    
+    return 0
 
 if __name__ == "__main__":
-    # 设置NumExpr线程数
-    os.environ["NUMEXPR_MAX_THREADS"] = "4"
-    main()
+    try:
+        # 设置NumExpr线程数
+        os.environ["NUMEXPR_MAX_THREADS"] = "4"
+        
+        # 运行主程序
+        result = main()
+        
+        # 清理资源
+        gc.collect()
+        
+        # 关闭日志
+        for handler in logging.root.handlers[:]:
+            handler.flush()
+            handler.close()
+            logging.root.removeHandler(handler)
+        
+        # 正常退出
+        os._exit(result)
+        
+    except Exception as e:
+        logging.error(f"程序执行出错: {e}")
+        os._exit(1)
