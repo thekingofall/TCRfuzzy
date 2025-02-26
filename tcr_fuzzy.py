@@ -3,7 +3,7 @@ import subprocess
 import importlib.util
 import os
 import multiprocessing
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, Optional
 import logging
 from datetime import datetime
 import gc
@@ -54,13 +54,14 @@ import numpy as np
 def get_optimal_process_count() -> int:
     """计算最优进程数"""
     cpu_cores = cpu_count()
-    MAX_PROCESSES = 16
+    MAX_PROCESSES = 8
+    
     optimal_processes = min(cpu_cores, MAX_PROCESSES)
     
-    if cpu_cores > 16:
+    if cpu_cores > 8:  # 如果是多核系统，减少使用的核心数
         optimal_processes = optimal_processes // 2
     
-    return max(1, min(optimal_processes, 8))
+    return max(1, min(optimal_processes, 4))  # 确保至少1个进程，最多4个进程
 
 def preprocess_string(s: str) -> str:
     """预处理字符串"""
@@ -68,7 +69,7 @@ def preprocess_string(s: str) -> str:
         s = str(s)
     return s.strip().lower()
 
-def calculate_similarity(args: Tuple[int, Tuple[str, str]]) -> Dict[str, Any]:
+def calculate_similarity(args: Tuple[int, Tuple[str, str]]) -> Optional[Dict[str, Any]]:
     """计算字符串相似度"""
     try:
         index, (str1, str2) = args
@@ -125,15 +126,18 @@ def process_batch(batch_data: List[Tuple[int, Tuple[str, str]]],
                  threshold: int) -> List[Dict[str, Any]]:
     """处理一批数据"""
     try:
+        # 使用更小的chunksize来避免内存问题
         batch_results = list(tqdm(
-            pool.imap(calculate_similarity, batch_data),
+            pool.imap_unordered(calculate_similarity, batch_data, chunksize=10),
             total=len(batch_data),
             desc="处理进度",
             unit="对"
         ))
         
-        # 移除None结果并应用阈值过滤
+        # 立即清理无效结果
         valid_results = [r for r in batch_results if r is not None]
+        del batch_results
+        
         if threshold > 0:
             valid_results = [r for r in valid_results if 
                            max(r['相似度(ratio)'],
@@ -145,10 +149,6 @@ def process_batch(batch_data: List[Tuple[int, Tuple[str, str]]],
     except Exception as e:
         logging.error(f"批处理时出错: {e}")
         return []
-
-def chunk_pairs(pairs: List[Tuple[str, str]], chunk_size: int) -> List[List[Tuple[str, str]]]:
-    """将配对列表分割成更小的块"""
-    return [pairs[i:i + chunk_size] for i in range(0, len(pairs), chunk_size)]
 
 def main():
     parser = argparse.ArgumentParser(
@@ -167,12 +167,10 @@ def main():
     parser.add_argument("--skip-rows", type=int, default=0, help="读取CSV时跳过的行数")
     parser.add_argument("-p", "--processes", type=int, default=0,
                         help="并行处理的进程数（默认为自动优化）")
-    parser.add_argument("-b", "--batch-size", type=int, default=1000,
+    parser.add_argument("-b", "--batch-size", type=int, default=50,
                         help="每批处理的对比对数")
     parser.add_argument("--threshold", type=int, default=0,
                         help="仅保存相似度分数高于此阈值的结果（0-100）")
-    parser.add_argument("--memory-limit", type=float, default=0.75,
-                        help="最大内存使用率（0.0-1.0）")
     
     args = parser.parse_args()
     
@@ -183,10 +181,6 @@ def main():
     
     if not 0 <= args.threshold <= 100:
         logging.error("阈值必须在0到100之间")
-        sys.exit(1)
-    
-    if not 0 < args.memory_limit <= 1:
-        logging.error("内存限制必须在0到1之间")
         sys.exit(1)
     
     # 设置最优进程数
@@ -207,6 +201,10 @@ def main():
         col1 = df.iloc[:, args.column1].astype(str).tolist()
         col2 = df.iloc[:, args.column2].astype(str).tolist()
         
+        # 清理DataFrame
+        del df
+        gc.collect()
+        
         # 生成对比对
         pairs = list(itertools.product(col1, col2))
         total_comparisons = len(pairs)
@@ -218,7 +216,7 @@ def main():
         logging.info(f"将比较 {len(col1)} x {len(col2)} = {total_comparisons} 个组合")
         
         # 调整批处理大小
-        batch_size = min(args.batch_size, max(100, total_comparisons // (processes * 4)))
+        batch_size = min(args.batch_size, max(50, total_comparisons // (processes * 8)))
         num_batches = (total_comparisons + batch_size - 1) // batch_size
         
         all_results = []
@@ -241,8 +239,11 @@ def main():
                 
                 # 清理内存
                 del batch_pairs
-                if batch_idx % 10 == 0:
-                    gc.collect()
+                gc.collect()
+        
+        # 清理pairs
+        del pairs
+        gc.collect()
         
         # 处理结果
         if not all_results:
@@ -254,22 +255,24 @@ def main():
         for result in all_results:
             del result['idx']
         
-        # 创建结果DataFrame
-        results_df = pd.DataFrame(all_results)
-        
-        # 确定输出路径
-        output_path = args.output or f"{os.path.splitext(args.csv_file)[0]}_similarity_results.csv"
-        
-        # 保存结果
-        results_df.to_csv(output_path, index=False)
-        logging.info(f"处理完成！共计算 {total_comparisons} 对，保存了 {len(results_df)} 条结果")
-        logging.info(f"结果已保存到: {output_path}")
+        # 创建结果DataFrame并保存
+        try:
+            results_df = pd.DataFrame(all_results)
+            output_path = args.output or f"{os.path.splitext(args.csv_file)[0]}_similarity_results.csv"
+            results_df.to_csv(output_path, index=False)
+            logging.info(f"处理完成！共计算 {total_comparisons} 对，保存了 {len(results_df)} 条结果")
+            logging.info(f"结果已保存到: {output_path}")
+        except Exception as e:
+            logging.error(f"保存结果时出错: {e}")
+            sys.exit(1)
         
     except Exception as e:
         logging.error(f"处理过程中出错: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":
-    # 设置NumExpr线程数
-    os.environ["NUMEXPR_MAX_THREADS"] = "8"
+    # 设置更保守的线程数
+    os.environ["NUMEXPR_MAX_THREADS"] = "4"
+    # 设置进程启动方法
+    multiprocessing.set_start_method('spawn', force=True)
     main()
