@@ -105,21 +105,7 @@ python tcr_fuzzy.py tcr_data.csv -d ";" -o tcr_similarity_results.csv
 - tqdm: 进度条显示
 - argparse: 命令行参数处理
 
-## 引用
 
-如果您在研究中使用了TCRfuzzy，请引用：
 
-```
-作者. (年份). TCRfuzzy: 一个用于T细胞受体序列相似度分析的高效工具. 
-GitHub仓库: https://github.com/yourusername/TCRfuzzy
-```
-
-## 许可证
-
-MIT
-
-## 贡献
-
-欢迎提交问题和拉取请求！欢迎免疫学、生物信息学和计算机科学领域的贡献者加入改进这个工具。
 
 
