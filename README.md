@@ -63,7 +63,8 @@ python tcr_fuzzy.py --help
 
 比较文件中特定列的TCR序列，使用，并只保存相似度大于70的结果：
 ```bash
-python tcr_fuzzy_batch.py test.csv --threads 8 --batch-size 200000
+
+python s tcr_fuzzy_batch.py test.csv  -c1 0 -c2 1 -o results.csv -d "," --encoding "utf-8" --skip-rows 1 --threshold 75 --threads 16 --batch-size 1500
 ```
 
 处理分号分隔的TCR数据文件，指定输出路径：
