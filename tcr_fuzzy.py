@@ -124,35 +124,53 @@ class TCRfuzzy:
                 logging.error(f"CSV文件只有{len(df.columns)}列，但指定了列{max(column1, column2)}")
                 return
             
-            # 获取列数据
-            col1 = df.iloc[:, column1].astype(str).tolist()
-            col2 = df.iloc[:, column2].astype(str).tolist()
+            # 获取列数据并去除重复和空值
+            col1 = df.iloc[:, column1].dropna().drop_duplicates().astype(str).tolist()
+            col2 = df.iloc[:, column2].dropna().drop_duplicates().astype(str).tolist()
             
             # 清理DataFrame
             del df
             gc.collect()
             
             # 计算总对比数
-            total_comparisons = len(col1) * len(col2)
-            logging.info(f"将比较 {len(col1)} x {len(col2)} = {total_comparisons} 个组合")
+            len1 = len(col1)
+            len2 = len(col2)
+            total_comparisons = len1 * len2
+            logging.info(f"将比较第{column1}列({len1}个序列) x 第{column2}列({len2}个序列) = {total_comparisons} 个组合")
             
             # 存储结果
             all_results = []
             
             # 使用tqdm显示进度
             with self.tqdm(total=total_comparisons, desc="处理进度", unit="对") as pbar:
-                for str1 in col1:
-                    for str2 in col2:
-                        result = self.calculate_similarity(str1, str2)
-                        if result is not None:
-                            if threshold == 0 or max(
-                                result['相似度(ratio)'],
-                                result['部分相似度(partial_ratio)'],
-                                result['排序标记相似度(token_sort_ratio)'],
-                                result['集合标记相似度(token_set_ratio)']
-                            ) >= threshold:
-                                all_results.append(result)
-                        pbar.update(1)
+                # 如果是同一列的比较，只比较上三角矩阵
+                if column1 == column2:
+                    for i, str1 in enumerate(col1):
+                        for str2 in col2[i+1:]:
+                            result = self.calculate_similarity(str1, str2)
+                            if result is not None:
+                                if threshold == 0 or max(
+                                    result['相似度(ratio)'],
+                                    result['部分相似度(partial_ratio)'],
+                                    result['排序标记相似度(token_sort_ratio)'],
+                                    result['集合标记相似度(token_set_ratio)']
+                                ) >= threshold:
+                                    all_results.append(result)
+                            pbar.update(1)
+                # 不同列的比较，进行全比较
+                else:
+                    for str1 in col1:
+                        for str2 in col2:
+                            result = self.calculate_similarity(str1, str2)
+                            if result is not None:
+                                if threshold == 0 or max(
+                                    result['相似度(ratio)'],
+                                    result['部分相似度(partial_ratio)'],
+                                    result['排序标记相似度(token_sort_ratio)'],
+                                    result['集合标记相似度(token_set_ratio)']
+                                ) >= threshold:
+                                    all_results.append(result)
+                            pbar.update(1)
             
             # 处理结果
             if not all_results:
