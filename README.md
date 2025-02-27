@@ -61,9 +61,9 @@ python tcr_fuzzy.py --help
 
 ### 示例
 
-比较文件中特定列的TCR序列，使用4个进程，并只保存相似度大于70的结果：
+比较文件中特定列的TCR序列，使用，并只保存相似度大于70的结果：
 ```bash
-python tcr_fuzzy.py tcr_data.csv -c1 3 -c2 4 -p 4 --threshold 70
+python tcr_fuzzy_batch.py test.csv --threads 8 --batch-size 200000
 ```
 
 处理分号分隔的TCR数据文件，指定输出路径：
