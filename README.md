@@ -1,117 +1,175 @@
-# TCRfuzzy
 
-一个专为TCR序列设计的高效并行模糊字符串匹配工具，用于计算和分析T细胞受体序列相似度。
 
-## 简介
 
-TCRfuzzy利用FuzzyWuzzy库和Levenshtein距离算法，专门用于比较TCR（T细胞受体）序列的相似度。该工具能够自动安装依赖，并利用多核CPU进行并行处理，显著提高大量TCR序列数据的处理速度。
+# TCRfuzzy - TCR序列相似度比较工具
 
-## 特性
+TCRfuzzy 是一个用于比较 TCR（T细胞受体）序列相似度的工具集，包含两个版本的实现：
 
-- **TCR序列比较**：专为比较TCR序列对设计
-- **自动依赖管理**：自动检测并安装必要的Python库
-- **多核并行处理**：利用所有可用CPU核心加速计算
-- **批量处理**：支持大型TCR数据集的内存高效处理
-- **多种相似度指标**：计算四种不同的相似度分数，适合不同类型的TCR序列分析
-- **灵活的参数配置**：支持自定义列索引、分隔符、编码等
-- **进度可视化**：实时显示处理进度
-- **相似度过滤**：可设置阈值只保留高相似度的TCR序列匹配结果
+- `tcr_fuzzy.py`: 基础版本，使用多线程在内存中处理
+- `tcr_fuzzy_batch.py`: 批处理版本，使用进程池处理大规模数据
+
+## 功能特点
+
+### 共同特点
+- 支持多种相似度计算方法
+- 自动安装依赖包
+- 详细的日志记录
+- 进度显示
+- 支持阈值过滤
+- 内存优化
+
+### tcr_fuzzy.py 特点
+- 单进程多线程处理
+- 适合中小规模数据
+- 内存中处理，速度较快
+
+### tcr_fuzzy_batch.py 特点
+- 多进程并行处理
+- 支持大规模数据
+- 批量处理，内存占用小
+- 支持断点续传
+- 更安全的文件处理
 
 ## 安装
 
-只需克隆此仓库：
+### 系统要求
+- Python 3.6+
+- pip (Python包管理器)
 
+### 安装步骤
+
+1. 克隆仓库：
 ```bash
-git clone https://github.com/thekingofall/TCRfuzzy.git
+git clone https://github.com/yourusername/TCRfuzzy.git
 cd TCRfuzzy
 ```
 
-需要Python 3.6或更高版本。脚本会自动安装所需的依赖包。
+2. 安装依赖：
+```bash
+pip install -r requirements.txt
+```
+
+或直接运行脚本，它会自动安装所需依赖。
+
+### 可选依赖（批处理版本）
+- GNU parallel
+- xargs (通常预装在Unix系统中)
 
 ## 使用方法
 
-### 基本用法
+### 基础版本 (tcr_fuzzy.py)
 
+基本用法：
 ```bash
-python tcr_fuzzy.py test.csv
+python tcr_fuzzy.py input.csv
 ```
 
-这将比较CSV文件中第一列和第二列的所有TCR序列可能组合，并将结果保存到同目录下的`your_tcr_file_similarity_results.csv`。
-
-### 查看帮助
-
+完整参数：
 ```bash
-python tcr_fuzzy.py --help
+python tcr_fuzzy.py [-h] [-c1 COLUMN1] [-c2 COLUMN2] [-o OUTPUT]
+                    [-d DELIMITER] [--encoding ENCODING]
+                    [--skip-rows SKIP_ROWS] [--threshold THRESHOLD]
+                    csv_file
+```
+
+### 批处理版本 (tcr_fuzzy_batch.py)
+
+基本用法：
+```bash
+python tcr_fuzzy_batch.py input.csv
+```
+
+完整参数：
+```bash
+python tcr_fuzzy_batch.py [-h] [-c1 COLUMN1] [-c2 COLUMN2] [-o OUTPUT]
+                         [-d DELIMITER] [--encoding ENCODING]
+                         [--skip-rows SKIP_ROWS] [--threshold THRESHOLD]
+                         [-p PROCESSES] [-b BATCH_SIZE]
+                         csv_file
 ```
 
 ### 参数说明
 
-| 参数 | 短格式 | 说明 | 默认值 |
-|------|------|------|------|
-| `csv_file` | - | 包含TCR序列的CSV文件路径 | (必需) |
-| `--column1` | `-c1` | 第一个TCR序列列的索引（从0开始） | 0 |
-| `--column2` | `-c2` | 第二个TCR序列列的索引（从0开始） | 1 |
-| `--output` | `-o` | 输出CSV文件的路径 | 原文件名_similarity_results.csv |
-| `--delimiter` | `-d` | CSV文件的分隔符 | , |
-| `--encoding` | - | CSV文件的编码 | utf-8 |
-| `--skip-rows` | - | 读取CSV时跳过的行数 | 0 |
-| `--processes` | `-p` | 并行处理的进程数 | 可用CPU核心数 |
-| `--batch-size` | `-b` | 每批处理的TCR序列对数 | 10000 |
-| `--threshold` | - | 仅保存相似度高于此阈值的结果 | 0 |
+- `csv_file`: 输入CSV文件路径（必需）
+- `-c1, --column1`: 第一个比较列的索引，从0开始（默认：0）
+- `-c2, --column2`: 第二个比较列的索引，从0开始（默认：1）
+- `-o, --output`: 输出文件路径
+- `-d, --delimiter`: CSV文件分隔符（默认：","）
+- `--encoding`: 文件编码（默认：utf-8）
+- `--skip-rows`: 跳过的起始行数（默认：0）
+- `--threshold`: 相似度阈值，0-100（默认：0）
 
-### 示例
+批处理版本额外参数：
+- `-p, --processes`: 最大并行进程数（默认：4）
+- `-b, --batch-size`: 每批处理的比较对数量（默认：50）
 
-比较文件中特定列的TCR序列，使用，并只保存相似度大于70的结果：
+## 使用示例
+
+### 基本比较
 ```bash
+# 基础版本
+python tcr_fuzzy.py data.csv
 
-python tcr_fuzzy_batch.py test.csv --threshold 75 --threads 90
+# 批处理版本
+python tcr_fuzzy_batch.py data.csv
 ```
 
-处理分号分隔的TCR数据文件，指定输出路径：
+### 指定列和阈值
 ```bash
-python tcr_fuzzy.py tcr_data.csv -d ";" -o tcr_similarity_results.csv
+# 基础版本
+python tcr_fuzzy.py data.csv -c1 0 -c2 1 --threshold 80
+
+# 批处理版本
+python tcr_fuzzy_batch.py data.csv -c1 0 -c2 1 --threshold 80
 ```
 
-## 输出说明
+### 自定义输出和分隔符
+```bash
+# 基础版本
+python tcr_fuzzy.py data.csv -o results.csv -d ";" --encoding "utf-8"
+
+# 批处理版本
+python tcr_fuzzy_batch.py data.csv -o results.csv -d ";" --encoding "utf-8"
+```
+
+### 批处理版本特有功能
+```bash
+# 指定进程数和批次大小
+python tcr_fuzzy_batch.py data.csv -p 8 -b 100
+
+# 大文件处理
+python tcr_fuzzy_batch.py big_data.csv -p 16 -b 1000
+```
+
+## 输出格式
 
 输出的CSV文件包含以下列：
+- 字符串1：第一个序列
+- 字符串2：第二个序列
+- 相似度(ratio)：基本相似度分数
+- 部分相似度(partial_ratio)：部分匹配相似度
+- 排序标记相似度(token_sort_ratio)：词序重排后的相似度
+- 集合标记相似度(token_set_ratio)：集合形式的相似度
 
-- `TCR序列1`: 第一列的TCR序列
-- `TCR序列2`: 第二列的TCR序列
-- `相似度(ratio)`: 基本序列相似度 (0-100)
-- `部分相似度(partial_ratio)`: 部分序列匹配相似度，适合CDR3区分析 (0-100)
-- `排序标记相似度(token_sort_ratio)`: 标记化并排序后的相似度，适合氨基酸顺序变异分析 (0-100)
-- `集合标记相似度(token_set_ratio)`: 标记化并作为集合比较的相似度，适合氨基酸组成分析 (0-100)
+## 选择建议
 
-## 应用场景
+- 对于小型数据集（<10万对比较）：使用基础版本（tcr_fuzzy.py）
+- 对于大型数据集（>10万对比较）：使用批处理版本（tcr_fuzzy_batch.py）
+- 内存受限系统：使用批处理版本，适当调小批次大小
+- 多核心系统：使用批处理版本，增加进程数
 
-- **TCR多样性分析**：评估T细胞库的克隆多样性
-- **CDR3区比较**：分析抗原特异性T细胞的CDR3区相似度
-- **TCR克隆型分类**：基于序列相似度对TCR克隆型进行分类
-- **序列聚类**：对大量TCR序列进行聚类分析
-- **交叉反应性预测**：预测不同TCR与抗原的潜在交叉反应性
+## 注意事项
 
-## 性能优化
+1. 内存使用
+   - 基础版本：所有数据都在内存中处理
+   - 批处理版本：通过批处理控制内存使用
 
-- 对于非常大的TCR数据集，建议增加批处理大小 (`--batch-size`)
-- 对于内存有限的系统，可以减小批处理大小
-- 设置适当的阈值 (`--threshold`) 可以减少输出文件大小
-- 进程数 (`--processes`) 设置为CPU核心数通常是最优的，但IO密集型系统可能需要调整
+2. 性能优化
+   - 适当的批次大小可以优化性能
+   - 进程数建议设置为CPU核心数的1-2倍
+   - 对于SSD系统，可以增加批次大小
 
-## 依赖库
-
-- pandas: 数据处理
-- fuzzywuzzy: 模糊字符串匹配
-- python-Levenshtein: 加速Levenshtein距离计算
-- tqdm: 进度条显示
-- argparse: 命令行参数处理
-
-## 使用者可以引用
-```
-https://www.nature.com/articles/s43587-023-00379-0#code-availability
-```
-
-
-
-
+3. 日志文件
+   - 程序运行时会生成日志文件：`TCR_comparison_YYYYMMDD_HHMMSS.log`
+   - 记录详细的运行信息和错误报告
 
