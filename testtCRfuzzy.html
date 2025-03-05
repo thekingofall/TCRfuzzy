@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>TCRFuzzySafe: Computational Framework for TCR Sequence Similarity Analysis</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: white;
+        }
+        .figure-container {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 20px;
+            background: #f9f9f9;
+        }
+        .figure-title {
+            font-weight: bold;
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        .diagram {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .caption {
+            font-size: 0.9em;
+            text-align: justify;
+            padding: 10px 5px;
+            border-top: 1px solid #ddd;
+            margin-top: 15px;
+        }
+        .box {
+            border: 2px solid;
+            border-radius: 8px;
+            margin: 5px;
+            padding: 10px;
+            text-align: center;
+            background: white;
+            position: relative;
+        }
+        .arrow {
+            margin: 0px auto;
+            width: 0;
+            height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-top: 12px solid #444;
+        }
+        .highlight {
+            background-color: #ffffc3;
+            padding: 0 2px;
+        }
+        .formula {
+            font-family: "Times New Roman", Times, serif;
+            font-style: italic;
+            font-size: 0.9em;
+            text-align: center;
+            margin: 5px 0;
+        }
+        .grid-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            width: 90%;
+            gap: 10px;
+        }
+        .grid-2-cols {
+            grid-column: span 2;
+        }
+        .grid-1-col {
+            grid-column: span 1;
+        }
+        .batch-container {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 10px 0;
+        }
+        .batch {
+            border: 1px solid #ED7D31;
+            border-radius: 5px;
+            padding: 6px;
+            margin: 3px;
+            width: 100px;
+            text-align: center;
+            background: white;
+            font-size: 0.9em;
+        }
+        .process-options {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            margin: 5px 0;
+        }
+        .process-option {
+            border: 1px solid #70AD47;
+            border-radius: 5px;
+            padding: 5px;
+            width: 30%;
+            text-align: center;
+            background: white;
+            font-size: 0.8em;
+        }
+        #input-box { border-color: #4472C4; background: #EBF1FA; }
+        #preprocess-box { border-color: #4472C4; }
+        #batch-box { border-color: #ED7D31; }
+        #parallel-box { border-color: #70AD47; background: #F2F9ED; }
+        #sim-box { border-color: #7030A0; background: #F5EBF9; }
+        #output-box { border-color: #4472C4; }
+    </style>
+</head>
+<body>
+    <div class="figure-container">
+        <div class="figure-title">TCRFuzzySafe: A Multi-dimensional Computational Framework for TCR Sequence Similarity Analysis</div>
+        
+        <div class="diagram">
+            <!-- Input -->
+            <div class="box" id="input-box">
+                <strong>Input Data</strong><br>
+                TCR Sequences from CSV File<br>
+                <small>[Column 1: n sequences, Column 2: m sequences]</small>
+            </div>
+            
+            <div class="arrow"></div>
+            
+            <!-- Preprocessing -->
+            <div class="box" id="preprocess-box">
+                <strong>Preprocessing Pipeline</strong><br>
+                Case normalization → Whitespace removal → Pair generation (n×m pairs)<br>
+                <small>Optimization: Deduplication, Empty sequence filtering</small>
+            </div>
+            
+            <div class="arrow"></div>
+            
+            <!-- Batching -->
+            <div class="box" id="batch-box">
+                <strong>Batch Partitioning</strong><br>
+                <small>N total pairs → ⌈N/k⌉ batches (k = batch size parameter)</small>
+                
+                <div class="batch-container">
+                    <div class="batch">Batch 1<br><small>k pairs</small></div>
+                    <div class="batch">Batch 2<br><small>k pairs</small></div>
+                    <div class="batch">Batch 3<br><small>k pairs</small></div>
+                    <div class="batch">...<br><small>&nbsp;</small></div>
+                </div>
+            </div>
+            
+            <div class="arrow"></div>
+            
+            <!-- Parallel Processing -->
+            <div class="box" id="parallel-box">
+                <strong>Adaptive Parallel Processing</strong><br>
+                <small>Environment detection → Resource allocation (p processes)</small>
+                
+                <div class="process-options">
+                    <div class="process-option">GNU Parallel<br><small>High efficiency</small></div>
+                    <div class="process-option">xargs<br><small>Medium efficiency</small></div>
+                    <div class="process-option">Python subprocess<br><small>Fallback option</small></div>
+                </div>
+            </div>
+            
+            <div class="arrow"></div>
+            
+            <!-- Similarity Calculation -->
+            <div class="box" id="sim-box">
+                <strong>Multi-dimensional Similarity Assessment</strong>
+                
+                <div class="grid-container">
+                    <div class="box grid-1-col" style="border-color: #7030A0;">
+                        <strong>Standard Ratio (r)</strong>
+                        <div class="formula">
+                            r = ((len(s<sub>1</sub>)+len(s<sub>2</sub>))-Lev(s<sub>1</sub>,s<sub>2</sub>))/(len(s<sub>1</sub>)+len(s<sub>2</sub>))×100
+                        </div>
+                        <small>Global sequence alignment</small>
+                    </div>
+                    
+                    <div class="box grid-1-col" style="border-color: #7030A0;">
+                        <strong>Partial Ratio (p)</strong>
+                        <div class="formula">
+                            p = max(r(subseq<sub>i</sub>, s<sub>shorter</sub>)) for all i
+                        </div>
+                        <small>Substring matching & motif detection</small>
+                    </div>
+                    
+                    <div class="box grid-1-col" style="border-color: #7030A0;">
+                        <strong>Token Sort Ratio (ts)</strong>
+                        <div class="formula">
+                            ts = r(sort(tokens(s<sub>1</sub>)), sort(tokens(s<sub>2</sub>)))
+                        </div>
+                        <small>Order-independent comparison</small>
+                    </div>
+                    
+                    <div class="box grid-1-col" style="border-color: #7030A0;">
+                        <strong>Token Set Ratio (tst)</strong>
+                        <div class="formula">
+                            tst = f(tokens(s<sub>1</sub>)∩tokens(s<sub>2</sub>), tokens(s<sub>1</sub>)-tokens(s<sub>2</sub>))
+                        </div>
+                        <small>Common & unique element analysis</small>
+                    </div>
+                    
+                    <div class="box grid-2-cols" style="border-color: #7030A0;">
+                        <strong>Threshold Filtering</strong><br>
+                        <div class="formula">
+                            Output pair if max(r, p, ts, tst) ≥ τ
+                        </div>
+                        <small>τ = user-defined threshold (0-100)</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="arrow"></div>
+            
+            <!-- Output -->
+            <div class="box" id="output-box">
+                <strong>Output</strong><br>
+                Comprehensive similarity report (CSV format)<br>
+                <small>Headers: [Sequence1, Sequence2, ratio, partial_ratio, token_sort_ratio, token_set_ratio]</small>
+            </div>
+        </div>
+        
+        <div class="caption">
+            <strong>Figure 1. TCRFuzzySafe computational framework schematic.</strong> The pipeline implements a scalable approach for T-cell receptor (TCR) sequence similarity analysis through five main stages. <span class="highlight">Input processing</span> extracts sequences from user-defined CSV columns and performs quality control. The <span class="highlight">batch partitioning</span> system divides comparison tasks into computationally efficient units to enable memory-optimized processing of large datasets. <span class="highlight">Adaptive parallel processing</span> automatically detects system capabilities to maximize computational efficiency across diverse environments. The <span class="highlight">multi-dimensional similarity assessment</span> module calculates four complementary metrics: (1) Standard ratio quantifies global sequence alignment based on Levenshtein distance; (2) Partial ratio identifies substring matches and conserved motifs; (3) Token sort ratio enables position-independent comparison; and (4) Token set ratio evaluates shared and unique sequence components. Results exceeding the user-defined similarity threshold (τ) are compiled into a comprehensive report. This integrated approach enables robust identification of TCR sequence relationships including direct matches, conserved regions, rearrangements, and functional homology.
+        </div>
+    </div>
+</body>
+</html>
